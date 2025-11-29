@@ -74,9 +74,14 @@ class AccountMonitorGUI:
         return_frame = ttk.Frame(notebook, padding="10")
         notebook.add(return_frame, text="Annual Return")
         
+        # Tab 3: Actual Return Chart
+        actual_return_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(actual_return_frame, text="Actual Return")
+        
         # Create charts
         self.create_balance_chart(balance_frame)
         self.create_return_chart(return_frame)
+        self.create_actual_return_chart(actual_return_frame)
     
     def create_balance_chart(self, parent):
         """Create balance line chart"""
@@ -106,7 +111,7 @@ class AccountMonitorGUI:
         self.return_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
     
     def update_charts(self):
-        """Update both charts with latest data"""
+        """Update all charts with latest data"""
         try:
             df = self.monitor.get_historical_data()
             
@@ -116,6 +121,9 @@ class AccountMonitorGUI:
                 
                 # Update return chart
                 self.update_return_chart(df)
+                
+                # Update actual return chart
+                self.update_actual_return_chart(df)
                 
                 # Update status
                 self.last_update_label.config(
@@ -211,6 +219,76 @@ class AccountMonitorGUI:
         self.return_ax.legend()
         self.return_ax.tick_params(axis='x', rotation=45)
         self.return_canvas.draw()
+    
+    def create_actual_return_chart(self, parent):
+        """Create actual return percentage chart"""
+        fig = Figure(figsize=(10, 6), dpi=100)
+        self.actual_return_ax = fig.add_subplot(111)
+        self.actual_return_ax.set_xlabel("Time")
+        self.actual_return_ax.set_ylabel("Actual Return (%)")
+        self.actual_return_ax.set_title("Actual Return (Relative to First Record)")
+        self.actual_return_ax.grid(True, alpha=0.3)
+        self.actual_return_ax.axhline(y=0, color='black', linestyle='--', linewidth=0.5)
+        
+        self.actual_return_canvas = FigureCanvasTkAgg(fig, parent)
+        self.actual_return_canvas.draw()
+        self.actual_return_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    
+    def update_actual_return_chart(self, df: pd.DataFrame):
+        """Update the actual return percentage chart"""
+        self.actual_return_ax.clear()
+        self.actual_return_ax.set_xlabel("Time")
+        self.actual_return_ax.set_ylabel("Actual Return (%)")
+        self.actual_return_ax.set_title("Actual Return (Relative to First Record)")
+        self.actual_return_ax.grid(True, alpha=0.3)
+        self.actual_return_ax.axhline(y=0, color='black', linestyle='--', linewidth=0.5)
+        
+        accounts = self.monitor.config.get("accounts", [])
+        if len(accounts) == 0:
+            return
+        
+        # Calculate actual return for each account against its own first record
+        for account in accounts:
+            account_name = account.get("Name")
+            
+            if account_name not in df.columns:
+                continue
+            
+            # Find first non-null value for this account
+            account_data = df[account_name].dropna()
+            if account_data.empty:
+                continue
+            
+            first_index = account_data.index[0]
+            first_value = account_data.iloc[0]
+            
+            if first_value == 0 or pd.isna(first_value):
+                continue
+            
+            # Calculate actual return for each point in time
+            returns = []
+            timestamps = []
+            
+            for i in range(len(df)):
+                current_index = df.index[i]
+                if current_index < first_index:
+                    continue
+                
+                current_value = df.loc[current_index, account_name]
+                if pd.isna(current_value):
+                    continue
+                
+                # Calculate actual return: ((current / first) - 1) * 100
+                actual_return = ((current_value / first_value) - 1) * 100
+                returns.append(actual_return)
+                timestamps.append(df.loc[current_index, 'timestamp'])
+            
+            if returns:
+                self.actual_return_ax.plot(timestamps, returns, label=account_name, marker='o', markersize=3)
+        
+        self.actual_return_ax.legend()
+        self.actual_return_ax.tick_params(axis='x', rotation=45)
+        self.actual_return_canvas.draw()
     
     def on_closing(self):
         """Handle window closing"""
