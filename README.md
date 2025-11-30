@@ -10,16 +10,50 @@ A Python GUI application to monitor Binance account balances and track performan
 - Real-time line charts showing:
   - USDT balance over time for each account
   - Annual return percentage relative to each account's first record
+  - Actual return percentage (non-annualized) for short-term tracking
 - Historical data saved to CSV file
 
 ## Installation
 
 1. Install Python 3.7 or higher
 
-2. Install required packages:
+2. Install system-level dependencies (required for GUI):
+   
+   **On Debian/Ubuntu:**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y python3-tk
+   ```
+   
+   **On Fedora/RHEL:**
+   ```bash
+   sudo dnf install python3-tkinter
+   ```
+   
+   **On Arch Linux:**
+   ```bash
+   sudo pacman -S tk
+   ```
+
+3. Install Python packages:
 ```bash
 pip install -r requirements.txt
 ```
+
+4. If you encounter `ImportError: cannot import name 'ImageTk' from 'PIL'`, upgrade Pillow:
+```bash
+pip install --upgrade pillow
+```
+
+## Troubleshooting
+
+### ModuleNotFoundError: No module named 'tkinter'
+- Install the system package for tkinter (see step 2 above)
+- The package name varies by Linux distribution
+
+### ImportError: cannot import name 'ImageTk' from 'PIL'
+- Upgrade Pillow to a newer version: `pip install --upgrade pillow`
+- This usually happens when matplotlib requires ImageTk but the system Pillow version is too old
 
 ## Configuration
 
@@ -53,7 +87,7 @@ pip install -r requirements.txt
 Run the GUI application:
 
 ```bash
-python account_monitor.py
+python3 account_monitor.py
 ```
 
 The application will:
@@ -70,10 +104,9 @@ The application will:
 
 2. **Data Storage**: Balance data is saved to `balance_history.csv` with timestamps
 
-3. **Annual Return Calculation**: 
-   - Calculates each account's annual return against its own first record
-   - Shows the percentage gain/loss from the initial balance
-   - Annualizes the return based on time elapsed
+3. **Return Calculations**: 
+   - **Annual Return**: Calculates each account's annual return against its own first record, annualized based on time elapsed
+   - **Actual Return**: Shows the non-annualized percentage change from the first record, providing a clearer view of short-term performance without the magnification effect of annualization
 
 ## Files
 
