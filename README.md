@@ -6,7 +6,7 @@ A Python GUI application to monitor Binance account balances and track performan
 
 - Monitor multiple Binance accounts simultaneously
 - Track spot pair balances in USDT equivalent
-- Automatic data collection every 5 minutes
+- Automatic data collection every 1 hour
 - Real-time line charts showing:
   - USDT balance over time for each account
   - Annual return percentage relative to each account's first record
@@ -92,7 +92,7 @@ python3 account_monitor.py
 
 The application will:
 - Start monitoring all configured accounts
-- Save balance data to `balance_history.csv` every 5 minutes
+- Save balance data to `balance_history.csv` every 1 hour
 - Display real-time charts updating every 30 seconds
 
 ## How It Works

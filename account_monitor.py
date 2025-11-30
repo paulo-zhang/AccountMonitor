@@ -29,7 +29,7 @@ class AccountMonitorGUI:
             return
         
         # Start monitoring
-        self.monitor.start_monitoring(interval_minutes=5)
+        self.monitor.start_monitoring(interval_minutes=60)
         
         # Create GUI elements
         self.create_widgets()
