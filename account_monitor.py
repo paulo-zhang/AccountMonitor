@@ -258,7 +258,7 @@ class AccountMonitorGUI:
         self.return_ax.clear()
         self.return_ax.set_xlabel("Time")
         self.return_ax.set_ylabel("Annual Return (%)")
-        self.return_ax.set_title("Annual Return (Relative to First Record)")
+        self.return_ax.set_title("Annual Return (Relative to First Filtered Record)")
         self.return_ax.grid(True, alpha=0.3)
         self.return_ax.axhline(y=0, color='black', linestyle='--', linewidth=0.5)
         
@@ -267,32 +267,32 @@ class AccountMonitorGUI:
         if len(selected_accounts) == 0:
             return
         
-        # Calculate annual return for each selected account against its own first record
+        # Calculate annual return for each selected account against its own first record in filtered data
         for account_name in selected_accounts:
             if account_name not in df.columns:
                 continue
+            
+            # Find first non-null value for this account in the FILTERED dataframe
+            account_data = df[account_name].dropna()
+            if account_data.empty:
+                continue
+            
+            # Get the first record from the filtered data (not original)
+            first_index = account_data.index[0]
+            first_row_idx = df.index.get_loc(first_index)
             
             # Calculate rolling annual return for each point in time
             returns = []
             timestamps = []
             
-            # Find first non-null value for this account
-            account_data = df[account_name].dropna()
-            if account_data.empty:
-                continue
-            
-            first_index = account_data.index[0]
-            
-            # Calculate return for each subsequent point
-            for i in range(1, len(df)):
+            # Calculate return for each subsequent point in the filtered dataframe
+            for i in range(first_row_idx, len(df)):
                 current_index = df.index[i]
-                if current_index < first_index:
-                    continue
                 
-                # Get data from first record to current point
+                # Get data from first filtered record to current point
                 df_subset = df.loc[first_index:current_index]
                 
-                # Calculate annual return against first record
+                # Calculate annual return against first filtered record
                 annual_return = self.monitor.calculate_account_annual_return(df_subset, account_name)
                 
                 if annual_return is not None:
@@ -325,7 +325,7 @@ class AccountMonitorGUI:
         self.actual_return_ax.clear()
         self.actual_return_ax.set_xlabel("Time")
         self.actual_return_ax.set_ylabel("Actual Return (%)")
-        self.actual_return_ax.set_title("Actual Return (Relative to First Record)")
+        self.actual_return_ax.set_title("Actual Return (Relative to First Filtered Record)")
         self.actual_return_ax.grid(True, alpha=0.3)
         self.actual_return_ax.axhline(y=0, color='black', linestyle='--', linewidth=0.5)
         
@@ -334,36 +334,37 @@ class AccountMonitorGUI:
         if len(selected_accounts) == 0:
             return
         
-        # Calculate actual return for each selected account against its own first record
+        # Calculate actual return for each selected account against its own first record in filtered data
         for account_name in selected_accounts:
             if account_name not in df.columns:
                 continue
             
-            # Find first non-null value for this account
+            # Find first non-null value for this account in the FILTERED dataframe
             account_data = df[account_name].dropna()
             if account_data.empty:
                 continue
             
+            # Get the first record from the filtered data (not original)
             first_index = account_data.index[0]
-            first_value = account_data.iloc[0]
+            first_value = account_data.iloc[0]  # First value in filtered data
+            first_row_idx = df.index.get_loc(first_index)
             
             if first_value == 0 or pd.isna(first_value):
                 continue
             
-            # Calculate actual return for each point in time
+            # Calculate actual return for each point in time in the filtered dataframe
             returns = []
             timestamps = []
             
-            for i in range(len(df)):
+            # Start from the first filtered record
+            for i in range(first_row_idx, len(df)):
                 current_index = df.index[i]
-                if current_index < first_index:
-                    continue
                 
                 current_value = df.loc[current_index, account_name]
                 if pd.isna(current_value):
                     continue
                 
-                # Calculate actual return: ((current / first) - 1) * 100
+                # Calculate actual return relative to first filtered record: ((current / first) - 1) * 100
                 actual_return = ((current_value / first_value) - 1) * 100
                 returns.append(actual_return)
                 timestamps.append(df.loc[current_index, 'timestamp'])
