@@ -81,12 +81,8 @@ class AccountMonitorGUI:
         # Enable/disable date filter checkbox
         self.date_filter_enabled = tk.BooleanVar(value=False)
         date_filter_cb = ttk.Checkbutton(date_frame, text="Filter by date",
-                                        variable=self.date_filter_enabled,
-                                        command=self.on_filter_change)
+                                        variable=self.date_filter_enabled)
         date_filter_cb.grid(row=0, column=3, padx=(0, 0), sticky=tk.W)
-        
-        # Bind date entry to update charts
-        self.date_entry.bind('<<DateEntrySelected>>', lambda e: self.on_filter_change())
         
         # Account selection
         ttk.Label(control_frame, text="Accounts:").grid(row=1, column=0, padx=(0, 5), pady=(10, 0), sticky=(tk.W, tk.N))
@@ -99,9 +95,13 @@ class AccountMonitorGUI:
             account_name = account.get("Name")
             var = tk.BooleanVar(value=True)  # All accounts selected by default
             self.selected_accounts[account_name] = var
-            cb = ttk.Checkbutton(account_frame, text=account_name, variable=var, 
-                                command=self.on_filter_change)
+            cb = ttk.Checkbutton(account_frame, text=account_name, variable=var)
             cb.grid(row=0, column=idx, padx=(0, 15), sticky=tk.W)
+        
+        # Search button
+        search_btn = ttk.Button(control_frame, text="Search", width=12,
+                               command=self.on_search_clicked)
+        search_btn.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky=tk.W)
         
         # Status frame
         status_frame = ttk.Frame(main_frame)
@@ -166,10 +166,9 @@ class AccountMonitorGUI:
         self.date_filter_enabled.set(False)
         # Set date to today (DateEntry requires a date, but we'll ignore it when checkbox is off)
         self.date_entry.set_date(date.today())
-        self.on_filter_change()
     
-    def on_filter_change(self):
-        """Called when filters change, triggers chart update"""
+    def on_search_clicked(self):
+        """Called when Search button is clicked, triggers chart update"""
         self.update_charts()
     
     def get_filtered_data(self, df: pd.DataFrame) -> pd.DataFrame:
