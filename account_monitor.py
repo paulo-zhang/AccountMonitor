@@ -68,21 +68,23 @@ class AccountMonitorGUI:
         
         ttk.Label(date_frame, text="Start Date:").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
         
-        # Date picker widget
+        # Get minimum date from data (earliest date or today if no data)
+        min_date = self.get_minimum_date()
+        
+        # Date picker widget with minimum date restriction
         self.date_entry = DateEntry(date_frame, width=12, background='darkblue',
-                                    foreground='white', borderwidth=2, year=datetime.now().year)
+                                    foreground='white', borderwidth=2, year=datetime.now().year,
+                                    mindate=min_date)
         self.date_entry.grid(row=0, column=1, padx=(0, 5), sticky=tk.W)
         
-        # Clear date button
-        clear_date_btn = ttk.Button(date_frame, text="Clear", width=8,
-                                    command=self.clear_date_filter)
-        clear_date_btn.grid(row=0, column=2, padx=(0, 5), sticky=tk.W)
+        # Set initial date to first data date or today
+        self.set_initial_date()
         
         # Enable/disable date filter checkbox
-        self.date_filter_enabled = tk.BooleanVar(value=False)
+        self.date_filter_enabled = tk.BooleanVar(value=True)
         date_filter_cb = ttk.Checkbutton(date_frame, text="Filter by date",
                                         variable=self.date_filter_enabled)
-        date_filter_cb.grid(row=0, column=3, padx=(0, 0), sticky=tk.W)
+        date_filter_cb.grid(row=0, column=2, padx=(0, 0), sticky=tk.W)
         
         # Account selection
         ttk.Label(control_frame, text="Accounts:").grid(row=1, column=0, padx=(0, 5), pady=(10, 0), sticky=(tk.W, tk.N))
@@ -161,11 +163,30 @@ class AccountMonitorGUI:
         self.return_canvas.draw()
         self.return_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
     
-    def clear_date_filter(self):
-        """Clear the date filter and disable it"""
-        self.date_filter_enabled.set(False)
-        # Set date to today (DateEntry requires a date, but we'll ignore it when checkbox is off)
-        self.date_entry.set_date(date.today())
+    def get_minimum_date(self) -> date:
+        """Get the minimum selectable date (earliest data date or today if no data)"""
+        try:
+            df = self.monitor.get_historical_data()
+            if df is not None and not df.empty and 'timestamp' in df.columns:
+                # Get the first timestamp from the data
+                first_timestamp = df['timestamp'].min()
+                # Convert to date object
+                if isinstance(first_timestamp, pd.Timestamp):
+                    return first_timestamp.date()
+                else:
+                    return pd.to_datetime(first_timestamp).date()
+            else:
+                # No data, use today
+                return date.today()
+        except Exception as e:
+            # If anything goes wrong, default to today
+            print(f"Error getting minimum date: {e}")
+            return date.today()
+    
+    def set_initial_date(self):
+        """Set the date picker to the first data date, or today if no data exists"""
+        min_date = self.get_minimum_date()
+        self.date_entry.set_date(min_date)
     
     def on_search_clicked(self):
         """Called when Search button is clicked, triggers chart update"""
