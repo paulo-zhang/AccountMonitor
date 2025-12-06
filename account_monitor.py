@@ -105,9 +105,9 @@ class AccountMonitorGUI:
             self.active_accounts.add(account_name)
         
         # Search button
-        search_btn = ttk.Button(control_frame, text="Search", width=12,
-                               command=self.on_search_clicked)
-        search_btn.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky=tk.W)
+        self.search_btn = ttk.Button(control_frame, text="Search", width=12,
+                                     command=self.on_search_clicked)
+        self.search_btn.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky=tk.W)
         
         # Status frame
         status_frame = ttk.Frame(main_frame)
@@ -194,11 +194,21 @@ class AccountMonitorGUI:
     
     def on_search_clicked(self):
         """Called when Search button is clicked, updates active filter state and triggers chart update"""
-        # Update active accounts based on current checkbox states
-        self.active_accounts = {name for name, var in self.selected_accounts.items() if var.get()}
-        # Update active date filter state based on current checkbox state
-        self.active_date_filter_enabled = self.date_filter_enabled.get()
-        self.update_charts()
+        # Disable button to prevent repeated clicks
+        self.search_btn.config(state='disabled')
+        
+        try:
+            # Update active accounts based on current checkbox states
+            self.active_accounts = {name for name, var in self.selected_accounts.items() if var.get()}
+            # Update active date filter state based on current checkbox state
+            self.active_date_filter_enabled = self.date_filter_enabled.get()
+            # Update charts (without scheduling next automatic update)
+            self.update_charts_manual()
+        except Exception as e:
+            print(f"Error during search: {e}")
+        finally:
+            # Re-enable button after processing is done
+            self.search_btn.config(state='normal')
     
     def get_filtered_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Filter data based on selected date and accounts"""
@@ -222,8 +232,18 @@ class AccountMonitorGUI:
         """Get list of active account names (used for filtering)"""
         return list(self.active_accounts)
     
+    def update_charts_manual(self):
+        """Update charts manually (called from Search button)"""
+        self._update_charts_impl()
+    
     def update_charts(self):
-        """Update all charts with latest data"""
+        """Update all charts with latest data (called automatically every 30 seconds)"""
+        self._update_charts_impl()
+        # Schedule next update (every 30 seconds)
+        self.root.after(30000, self.update_charts)
+    
+    def _update_charts_impl(self):
+        """Internal method to update charts"""
         try:
             df = self.monitor.get_historical_data()
             
@@ -252,9 +272,6 @@ class AccountMonitorGUI:
         
         except Exception as e:
             print(f"Error updating charts: {e}")
-        
-        # Schedule next update (every 30 seconds)
-        self.root.after(30000, self.update_charts)
     
     def update_balance_chart(self, df: pd.DataFrame):
         """Update the balance line chart"""
