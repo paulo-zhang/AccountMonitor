@@ -34,7 +34,9 @@ class AccountMonitorGUI:
         
         # Initialize filter variables
         self.start_date = None  # Will be set to earliest date by default
-        self.selected_accounts = {}  # Dictionary to track selected accounts
+        self.selected_accounts = {}  # Dictionary to track selected accounts (UI state)
+        self.active_accounts = set()  # Set of accounts currently used for filtering (updated only on Search)
+        self.active_date_filter_enabled = True  # Active date filter state (updated only on Search)
         
         # Create GUI elements
         self.create_widgets()
@@ -99,6 +101,8 @@ class AccountMonitorGUI:
             self.selected_accounts[account_name] = var
             cb = ttk.Checkbutton(account_frame, text=account_name, variable=var)
             cb.grid(row=0, column=idx, padx=(0, 15), sticky=tk.W)
+            # Initialize active accounts with all accounts selected
+            self.active_accounts.add(account_name)
         
         # Search button
         search_btn = ttk.Button(control_frame, text="Search", width=12,
@@ -189,7 +193,11 @@ class AccountMonitorGUI:
         self.date_entry.set_date(min_date)
     
     def on_search_clicked(self):
-        """Called when Search button is clicked, triggers chart update"""
+        """Called when Search button is clicked, updates active filter state and triggers chart update"""
+        # Update active accounts based on current checkbox states
+        self.active_accounts = {name for name, var in self.selected_accounts.items() if var.get()}
+        # Update active date filter state based on current checkbox state
+        self.active_date_filter_enabled = self.date_filter_enabled.get()
         self.update_charts()
     
     def get_filtered_data(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -197,8 +205,8 @@ class AccountMonitorGUI:
         if df is None or df.empty:
             return df
         
-        # Filter by date if enabled
-        if self.date_filter_enabled.get():
+        # Filter by date if enabled (use active state, not checkbox state)
+        if self.active_date_filter_enabled:
             try:
                 selected_date = self.date_entry.get_date()
                 # Convert date to datetime for comparison
@@ -211,8 +219,8 @@ class AccountMonitorGUI:
         return df
     
     def get_selected_account_names(self) -> list:
-        """Get list of selected account names"""
-        return [name for name, var in self.selected_accounts.items() if var.get()]
+        """Get list of active account names (used for filtering)"""
+        return list(self.active_accounts)
     
     def update_charts(self):
         """Update all charts with latest data"""
